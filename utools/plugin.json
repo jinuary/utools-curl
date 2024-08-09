@@ -12,7 +12,8 @@
           "match": "/^(https?:\/\/|curl)/i",
           "label": "curl",
           "maxLength": 10000
-        }
+        },
+        "curl","http"
       ]
     }
   ]
