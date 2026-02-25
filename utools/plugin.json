@@ -13,7 +13,7 @@
           "label": "curl",
           "maxLength": 10000
         },
-        "curl","http"
+        "curl","http","curl52"
       ]
     }
   ]

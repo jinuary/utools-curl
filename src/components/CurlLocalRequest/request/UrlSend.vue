@@ -1,12 +1,39 @@
 <template>
 
   <div id="urlSend">
+    <el-drawer v-model="curlHistoryDrawer" title="历史记录" size="50%" :with-header="false">
+      <el-card class="history-card">
+          <template #header>
+            <div class="card-header">
+              <span class="header-title">历史记录</span>
+              <el-button type="danger" size="small" @click="clearCurlHistory">清空记录</el-button>
+            </div>
+          </template>
+        <el-table v-if="curlHistoryList.size > 0" :data="Array.from(curlHistoryList.values())" style="width: 100%" stripe>
+          <el-table-column prop="data.method" label="操作" width="100" align="center">
+            <template #default="scope">
+              <el-button size="small" type="primary" @click="useHistoryItem(scope.row)">使用</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column prop="data.url" label="URL" min-width="400">
+            <template #default="scope">
+              <el-tooltip :content="scope.row.data.url" placement="top">
+                <div class="url-cell">{{ scope.row.data.url }}</div>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-else class="empty-history">
+          <el-empty description="暂无历史记录" />
+        </div>
+      </el-card>
+    </el-drawer>
     <el-row class="elRow">
-      <!--      <el-col :span="3" class="elCol">-->
-      <!--        <div class="grid-content bg-purple-dark cursorPointer" v-on:click="clearCurl">-->
-      <!--          <el-tag class="ml-2">清空</el-tag>-->
-      <!--        </div>-->
-      <!--      </el-col>-->
+      <el-col :span="3" class="elCol" >
+        <div class="grid-content bg-purple-dark cursorPointer" v-on:click="getCurlHistoryList">
+          <el-tag class="ml-2">历史Curl</el-tag>
+        </div>
+      </el-col>
       <el-col :span="3" class="elCol">
         <div class="grid-content bg-purple-dark cursorPointer" v-on:click="getCurlAndCopy">
           <el-tag class="ml-2">提取剪切板中的curl</el-tag>
@@ -69,6 +96,7 @@
 import curlString from "curl-string";
 import {ElMessage} from "element-plus";
 
+
 export default {
   name: "UrlComponent",
   computed: {
@@ -82,7 +110,9 @@ export default {
   data: function () {
     return {
       oldUrl: "",
-      replaceDomain: ""
+      replaceDomain: "",
+      curlHistoryDrawer: false,
+      curlHistoryList: new Map(),
     }
   },
   watch: {
@@ -115,15 +145,38 @@ export default {
     clearCurl: function () {
       this.$store.state.curl.request.url = ""
       this.$store.state.curl.request.method = ""
-      this.$store.state.curl.request.headers = ""
+      this.$store.state.curl.request.headers = {}
       this.$store.state.curl.request.body = ""
+    },
+    //curl历史记录
+    getCurlHistoryList:function (){
+      this.curlHistoryDrawer=true;
+      window.utools.db.promises.allDocs("ch/").then(docs => {
+        console.log(docs)
+        docs.forEach(d => this.curlHistoryList.set(d._id,d))
+        console.log("记录数量：",this.curlHistoryList.size)
+      })
+    },
+    clearCurlHistory() {
+
+      for (let key of this.curlHistoryList.keys()) {
+        this.curlHistoryList.delete(key)
+        window.utools.db.promises.remove(key);
+      }
+
+      ElMessage({
+        message: '已清空历史记录',
+        type: 'info',
+        duration: 500
+      })
     },
     //提取剪切板中的curl
     getCurlAndCopy: function () {
       navigator.clipboard.readText().then((text) => {
         if (/^(https?:\/\/|curl)/.test(text)) {
-          console.log('剪切板内容正常');
+          console.log('剪切板内容正常',text);
           this.$emit("parseCurl", text)
+
         } else {
           ElMessage({
             message: '不支持的剪切板内容',
@@ -291,7 +344,17 @@ export default {
       if (dbUrlMapping?.data?.[rawUrl]) {
         this.replaceDomain = dbUrlMapping?.data?.[rawUrl]
       }
-    }
+    },
+    // 使用历史记录项
+    useHistoryItem: function (item) {
+      this.$emit("parseCurl", item.data.curl)
+      this.curlHistoryDrawer = false
+      ElMessage({
+        message: '已加载历史记录',
+        type: 'success',
+        duration: 500
+      })
+    },
   }
 }
 </script>
@@ -309,12 +372,12 @@ export default {
 .elRow {
   margin-bottom: 10px;
   display: flex;
-  justify-content: right;
+  justify-content: space-between;
 }
 
 .elCol {
   display: flex;
-  justify-content: right;
+  justify-content: space-around;
 }
 
 .cursorPointer:hover {
@@ -338,5 +401,26 @@ export default {
 #domainReplaceButton {
   color: green;
 }
-
+.history-card {
+  margin: 0;
+  height: 100%;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.header-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+.url-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.empty-history {
+  padding: 40px 0;
+  text-align: center;
+}
 </style>

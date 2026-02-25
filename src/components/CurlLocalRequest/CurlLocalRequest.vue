@@ -13,6 +13,7 @@
 import Request from "@/components/CurlLocalRequest/request/Request";
 import Response from "@/components/CurlLocalRequest/response/Response";
 import * as Curl from "parse-curl";
+import {md5} from "@/static/js/md5";
 export default {
   name: 'CurlLocalRequest',
   components: {
@@ -48,6 +49,15 @@ export default {
       }
       console.log("curl:", curl)
 
+      window.utools.db.put({
+        _id: "ch/"+md5(curlStr),
+        data: {
+          curl:curlStr,
+          url: curl.url,
+          body: curl.body,
+          time:new Date(),
+        },
+      })
       //初始化
       this.$store.commit('initByCurlText', curl);
     }

@@ -27,6 +27,7 @@ sendRequest = function (curl, callback, errorCallback) {
         };
         let request;
         if (curl.url.startsWith('https')) {
+            options.rejectUnauthorized = false;
             request = https.request(options, callback);
         } else {
             request = http.request(options, callback);
